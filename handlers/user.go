@@ -67,16 +67,13 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
-
-	result, err := h.DB.ExecContext(ctx, "INSERT INTO users (name, email) VALUES (?, ?)", u.Name, u.Email)
+	query := "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id"
+	err := h.DB.QueryRowContext(ctx, query, u.Name, u.Email).Scan(&u.ID)
 	if err != nil {
 
 		utils.ErrorJSON(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	id, _ := result.LastInsertId()
-	u.ID = int(id)
 
 	utils.JSON(w, http.StatusCreated, "User created successfully", u)
 }
@@ -95,7 +92,7 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	var u models.User
-	err = h.DB.QueryRowContext(ctx, "SELECT id, name, email FROM users WHERE id = ?", id).Scan(&u.ID, &u.Name, &u.Email)
+	err = h.DB.QueryRowContext(ctx, "SELECT id, name, email FROM users WHERE id = $1", id).Scan(&u.ID, &u.Name, &u.Email)
 	if err == sql.ErrNoRows {
 
 		utils.ErrorJSON(w, http.StatusNotFound, "User not found")
@@ -121,7 +118,7 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
-	result, err := h.DB.ExecContext(ctx, "DELETE FROM users WHERE id = ?", id)
+	result, err := h.DB.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
 	if err != nil {
 
 		utils.ErrorJSON(w, http.StatusInternalServerError, err.Error())
@@ -164,7 +161,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
-	result, err := h.DB.ExecContext(ctx, "UPDATE users SET name = ?, email = ? WHERE id = ?", u.Name, u.Email, id)
+	result, err := h.DB.ExecContext(ctx, "UPDATE users SET name = $1, email = $2 WHERE id = $3", u.Name, u.Email, id)
 	if err != nil {
 		utils.ErrorJSON(w, http.StatusInternalServerError, err.Error())
 
@@ -173,12 +170,13 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
-		http.Error(w, "User not found", http.StatusNotFound)
+
+		utils.ErrorJSON(w, http.StatusNotFound, "User not found")
 		return
 	}
 
 	u.ID = id
 
-	utils.JSON(w, http.StatusNoContent, "User Update successfully", u)
+	utils.JSON(w, http.StatusOK, "User Update successfully", u)
 
 }

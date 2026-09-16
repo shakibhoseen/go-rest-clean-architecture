@@ -4,20 +4,21 @@ import (
 	"database/sql"
 	"log"
 
-	_ "modernc.org/sqlite" // আন্ডারস্কোর দিয়ে শুধু ড্রাইভার রেজিস্টার করা
+	//_ "modernc.org/sqlite" // আন্ডারস্কোর দিয়ে শুধু ড্রাইভার রেজিস্টার করা
+	_ "github.com/jackc/pgx/v5/stdlib" // pgx ড্রাইভার
 )
 
-func InitDB(dbPath string) *sql.DB {
-	db, err := sql.Open("sqlite", dbPath)
+func InitDB(dsn string) *sql.DB {
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Connection error:", err)
 	}
 
 	createTableQuery := `
 	CREATE TABLE IF NOT EXISTS users (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT NOT NULL,
-		email TEXT NOT NULL UNIQUE
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(100) NOT NULL,
+		email VARCHAR(100) NOT NULL UNIQUE
 	);`
 
 	if _, err := db.Exec(createTableQuery); err != nil {

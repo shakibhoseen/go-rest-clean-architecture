@@ -8,8 +8,8 @@ import (
 )
 
 type Config struct {
-	Port   string
-	DBPath string
+	Port  string
+	DBDSN string
 }
 
 func LoadConfig() *Config {
@@ -22,13 +22,13 @@ func LoadConfig() *Config {
 		port = "8080" // default backup
 	}
 
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "test.db"
+	dbDSN := os.Getenv("DB_DSN")
+	if dbDSN == "" {
+		dbDSN = "postgres://shakib@localhost:5432/testdb?sslmode=disable"
 	}
 
 	return &Config{
-		Port:   port,
-		DBPath: dbPath,
+		Port:  port,
+		DBDSN: dbDSN,
 	}
 }

@@ -12,7 +12,7 @@ func main() {
 	// ১. কনফিগারেশন লোড
 	cfg := config.LoadConfig()
 	// data base initialize
-	db := config.InitDB(cfg.DBPath)
+	db := config.InitDB(cfg.DBDSN)
 	defer db.Close()
 
 	//handler initialize
