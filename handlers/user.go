@@ -3,8 +3,8 @@ package handlers
 import (
 	"context"
 	"crud/models"
+	"crud/service"
 	"crud/utils"
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -12,54 +12,19 @@ import (
 )
 
 type UserHandler struct {
-	DB *sql.DB
+	svc service.UserService
 }
 
-func NewUserHandler(db *sql.DB) *UserHandler {
-	return &UserHandler{DB: db}
+func NewUserHandler(svc service.UserService) *UserHandler {
+	return &UserHandler{svc: svc}
 }
-
-// GetAllUsers handles GET /users
-func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-	defer cancel()
-
-	rows, err := h.DB.QueryContext(ctx, "SELECT id, name, email FROM users")
-	if err != nil {
-		utils.ErrorJSON(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	defer rows.Close()
-
-	var users []models.User
-	for rows.Next() {
-		var u models.User
-		if err := rows.Scan(&u.ID, &u.Name, &u.Email); err != nil {
-
-			utils.ErrorJSON(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		users = append(users, u)
-	}
-
-	if err := rows.Err(); err != nil {
-		utils.ErrorJSON(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	utils.JSON(w, http.StatusOK, "Users retrieved successfully", users)
-}
-
-// PostUser handles POST /users
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var u models.User
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-
-		utils.ErrorJSON(w, http.StatusBadRequest, err.Error())
+		utils.ErrorJSON(w, http.StatusBadRequest, "Invalid JSON payload")
 		return
 	}
 
-	// ১. স্বয়ংক্রিয় ইনপুট ভ্যালিডেশন
 	if err := u.Validate(); err != nil {
 		utils.ErrorJSON(w, http.StatusBadRequest, err.Error())
 		return
@@ -67,23 +32,31 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
-	query := "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id"
-	err := h.DB.QueryRowContext(ctx, query, u.Name, u.Email).Scan(&u.ID)
-	if err != nil {
 
-		utils.ErrorJSON(w, http.StatusInternalServerError, err.Error())
+	if err := h.svc.CreateUser(ctx, &u); err != nil {
+		utils.ErrorJSON(w, http.StatusConflict, "Email already exists or DB error")
 		return
 	}
 
 	utils.JSON(w, http.StatusCreated, "User created successfully", u)
 }
 
-// GetUserByID handles GET /users/{id}
-func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) GetAll(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
 
+	users, err := h.svc.GetAllUsers(ctx)
+	if err != nil {
+		utils.ErrorJSON(w, http.StatusInternalServerError, "Failed to retrieve users")
+		return
+	}
+
+	utils.JSON(w, http.StatusOK, "Users retrieved successfully", users)
+}
+
+func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
-
 		utils.ErrorJSON(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
@@ -91,92 +64,59 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
-	var u models.User
-	err = h.DB.QueryRowContext(ctx, "SELECT id, name, email FROM users WHERE id = $1", id).Scan(&u.ID, &u.Name, &u.Email)
-	if err == sql.ErrNoRows {
-
-		utils.ErrorJSON(w, http.StatusNotFound, "User not found")
-		return
-	} else if err != nil {
-
-		utils.ErrorJSON(w, http.StatusInternalServerError, err.Error())
+	u, err := h.svc.GetUserByID(ctx, id)
+	if err != nil {
+		utils.ErrorJSON(w, http.StatusNotFound, err.Error())
 		return
 	}
-	utils.JSON(w, http.StatusOK, "User fetch success", u)
+
+	utils.JSON(w, http.StatusOK, "User fetched successfully", u)
 }
 
-// DeleteUser handles DELETE /users/{id}
-func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
-
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil {
-
-		utils.ErrorJSON(w, http.StatusBadRequest, "Invalid user ID")
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-	defer cancel()
-
-	result, err := h.DB.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
-	if err != nil {
-
-		utils.ErrorJSON(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-
-		utils.ErrorJSON(w, http.StatusNotFound, "User not found")
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// update handlers Put /users/{id}
 func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
-
 		utils.ErrorJSON(w, http.StatusBadRequest, "Invalid user ID")
-		//Utils
 		return
 	}
 
 	var u models.User
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-
-		utils.ErrorJSON(w, http.StatusBadRequest, err.Error())
+		utils.ErrorJSON(w, http.StatusBadRequest, "Invalid JSON payload")
 		return
 	}
 
-	// আপডেট করার আগেও ভ্যালিডেশন চেক
 	if err := u.Validate(); err != nil {
 		utils.ErrorJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	u.ID = id
+
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
+	if err := h.svc.UpdateUser(ctx, &u); err != nil {
+		utils.ErrorJSON(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	utils.JSON(w, http.StatusOK, "User updated successfully", u)
+}
+
+func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		utils.ErrorJSON(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
-	result, err := h.DB.ExecContext(ctx, "UPDATE users SET name = $1, email = $2 WHERE id = $3", u.Name, u.Email, id)
-	if err != nil {
-		utils.ErrorJSON(w, http.StatusInternalServerError, err.Error())
-
+	if err := h.svc.DeleteUser(ctx, id); err != nil {
+		utils.ErrorJSON(w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-
-		utils.ErrorJSON(w, http.StatusNotFound, "User not found")
-		return
-	}
-
-	u.ID = id
-
-	utils.JSON(w, http.StatusOK, "User Update successfully", u)
-
+	w.WriteHeader(http.StatusNoContent)
 }
