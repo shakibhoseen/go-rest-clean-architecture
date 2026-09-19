@@ -30,6 +30,8 @@ func main() {
 	mux.HandleFunc("GET /users/{id}", userHandler.GetByID)
 	mux.HandleFunc("DELETE /users/{id}", userHandler.Delete)
 	mux.HandleFunc("PUT /users/{id}", userHandler.Update)
+	mux.HandleFunc("POST /auth/register", userHandler.Register)
+	mux.HandleFunc("POST /auth/login", userHandler.Login)
 
 	fmt.Println("Server running clean on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(cfg.Port, mux))

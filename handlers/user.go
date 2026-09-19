@@ -15,9 +15,66 @@ type UserHandler struct {
 	svc service.UserService
 }
 
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 func NewUserHandler(svc service.UserService) *UserHandler {
 	return &UserHandler{svc: svc}
 }
+
+func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
+	var u models.User
+	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+		utils.ErrorJSON(w, http.StatusBadRequest, "Invalid JSON payload")
+		return
+	}
+
+	if err := u.Validate(); err != nil {
+		utils.ErrorJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := u.ValidatePassword(); err != nil {
+		utils.ErrorJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
+	if err := h.svc.RegisterUser(ctx, &u); err != nil {
+		utils.ErrorJSON(w, http.StatusConflict, "Email already registered or database error")
+		return
+	}
+
+	utils.JSON(w, http.StatusCreated, "User registered successfully", u)
+}
+
+func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
+	var req LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.ErrorJSON(w, http.StatusBadRequest, "Invalid JSON payload")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
+	token, user, err := h.svc.Login(ctx, req.Email, req.Password)
+	if err != nil {
+		utils.ErrorJSON(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	respData := map[string]any{
+		"token": token,
+		"user":  user,
+	}
+
+	utils.JSON(w, http.StatusOK, "Login successful", respData)
+}
+
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var u models.User
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
