@@ -14,15 +14,8 @@ func InitDB(dsn string) *sql.DB {
 		log.Fatal("Connection error:", err)
 	}
 
-	createTableQuery := `
-	CREATE TABLE IF NOT EXISTS users (
-		id SERIAL PRIMARY KEY,
-		name VARCHAR(100) NOT NULL,
-		email VARCHAR(100) NOT NULL UNIQUE
-	);`
-
-	if _, err := db.Exec(createTableQuery); err != nil {
-		log.Fatal("Failed to create table:", err)
+	if err := db.Ping(); err != nil {
+		log.Fatal("Database ping failed:", err)
 	}
 
 	return db
