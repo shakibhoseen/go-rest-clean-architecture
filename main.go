@@ -25,13 +25,17 @@ func main() {
 
 	// route setup
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /users", userHandler.GetAll)
-	mux.HandleFunc("POST /users", userHandler.Create)
-	mux.HandleFunc("GET /users/{id}", userHandler.GetByID)
-	mux.HandleFunc("DELETE /users/{id}", userHandler.Delete)
-	mux.HandleFunc("PUT /users/{id}", userHandler.Update)
+
+	//public
 	mux.HandleFunc("POST /auth/register", userHandler.Register)
 	mux.HandleFunc("POST /auth/login", userHandler.Login)
+
+	//protect with middleware
+	mux.HandleFunc("GET /users", handlers.Protected(userHandler.GetAll))
+	mux.HandleFunc("POST /users", handlers.Protected(userHandler.Create))
+	mux.HandleFunc("GET /users/{id}", handlers.Protected(userHandler.GetByID))
+	mux.HandleFunc("DELETE /users/{id}", handlers.Protected(userHandler.Delete))
+	mux.HandleFunc("PUT /users/{id}", handlers.Protected(userHandler.Update))
 
 	fmt.Println("Server running clean on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(cfg.Port, mux))
