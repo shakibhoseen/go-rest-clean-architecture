@@ -37,6 +37,17 @@ func main() {
 	mux.HandleFunc("DELETE /users/{id}", handlers.Protected(userHandler.Delete))
 	mux.HandleFunc("PUT /users/{id}", handlers.Protected(userHandler.Update))
 
+	// 1. Todo Wiring
+	todoRepo := repository.NewTodoRepository(db)
+	todoSvc := service.NewTodoService(todoRepo)
+	todoHandler := handlers.NewTodoHandler(todoSvc)
+
+	// 2. Protected Routes
+	mux.HandleFunc("POST /todos", handlers.Protected(todoHandler.Create))
+	mux.HandleFunc("GET /todos", handlers.Protected(todoHandler.GetAll))
+	mux.HandleFunc("DELETE /todos/{id}", handlers.Protected(todoHandler.Delete))
+	mux.HandleFunc("PUT /todos/{id}", handlers.Protected(todoHandler.Update))
+
 	fmt.Println("Server running clean on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(cfg.Port, mux))
 }
