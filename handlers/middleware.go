@@ -55,3 +55,22 @@ func Protected(handlerFunc http.HandlerFunc) http.HandlerFunc {
 		AuthMiddleware(handlerFunc).ServeHTTP(w, r)
 	}
 }
+
+func EnableCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// সব ডোমেইন থেকে অ্যাক্সেস অ্যালাউ করা
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		// অনুমোদিত মেথডগুলো
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		// ক্লায়েন্ট থেকে যে হেডারগুলো পাঠানো অনুমোদিত (Authorization মাস্ট)
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		// ব্রাউজারের পাঠানো Preflight (OPTIONS) রিকোয়েস্ট হলে সাথে সাথে 200 OK দিয়ে রিটার্ন করা
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}

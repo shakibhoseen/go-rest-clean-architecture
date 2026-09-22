@@ -49,5 +49,6 @@ func main() {
 	mux.HandleFunc("PUT /todos/{id}", handlers.Protected(todoHandler.Update))
 
 	fmt.Println("Server running clean on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(cfg.Port, mux))
+	log.Fatal(http.ListenAndServe(cfg.Port, handlers.EnableCORS(mux)))
+
 }
