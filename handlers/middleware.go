@@ -3,7 +3,9 @@ package handlers
 import (
 	"context"
 	"crud/utils"
+	"log"
 	"net/http"
+	"runtime/debug"
 	"strings"
 )
 
@@ -70,6 +72,23 @@ func EnableCORS(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// Saluadan ti server tapno saan nga ag-crash no adda runtime panic
+func RecoverMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				// 1. I-print ti kompleto a stack trace iti terminal tapno makita ti developers
+				log.Printf("[PANIC RECOVERED] %v\nStack Trace:\n%s", err, debug.Stack())
+
+				// 2. Isubli ti nadalus a JSON response iti client (awan ti sensitive details)
+				utils.ErrorJSON(w, http.StatusInternalServerError, "Internal server error. Please try again later.")
+			}
+		}()
 
 		next.ServeHTTP(w, r)
 	})

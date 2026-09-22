@@ -48,7 +48,15 @@ func main() {
 	mux.HandleFunc("DELETE /todos/{id}", handlers.Protected(todoHandler.Delete))
 	mux.HandleFunc("PUT /todos/{id}", handlers.Protected(todoHandler.Update))
 
+	mux.HandleFunc("GET /panic-test", func(w http.ResponseWriter, r *http.Request) {
+		// ইচ্ছাকৃতভাবে ক্র্যাশ ঘটানো
+		panic("Testing panic recovery guard!")
+	})
+
+	crosHandler := handlers.EnableCORS(mux)
+	globalHandler := handlers.RecoverMiddleware(crosHandler)
+
 	fmt.Println("Server running clean on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(cfg.Port, handlers.EnableCORS(mux)))
+	log.Fatal(http.ListenAndServe(cfg.Port, globalHandler))
 
 }
