@@ -24,6 +24,17 @@ func NewUserHandler(svc service.UserService) *UserHandler {
 	return &UserHandler{svc: svc}
 }
 
+// Register godoc
+// @Summary      Register a new user
+// @Description  Create a new user account with name, email, and password
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request body models.RegisterRequest true "User Registration Info"
+// @Success      201 {object} utils.APIResponse
+// @Failure      400 {object} utils.ErrorResponse
+// @Failure      409 {object} utils.ErrorResponse
+// @Router       /auth/register [post]
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var u models.User
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
@@ -51,6 +62,17 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	utils.JSON(w, http.StatusCreated, "User registered successfully", u)
 }
 
+// Login godoc
+// @Summary      User Login
+// @Description  Authenticate user with email and password to receive a JWT token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request body models.LoginRequest true "Login Credentials"
+// @Success      200 {object} utils.APIResponse
+// @Failure      400 {object} utils.ErrorResponse
+// @Failure      401 {object} utils.ErrorResponse
+// @Router       /auth/login [post]
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

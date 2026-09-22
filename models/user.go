@@ -49,3 +49,16 @@ type Response struct {
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
+
+// RegisterRequest represents the user registration payload
+type RegisterRequest struct {
+	Name     string `json:"name" example:"John Doe"`
+	Email    string `json:"email" example:"alice@example.com"`
+	Password string `json:"password" example:"mypassword123"`
+}
+
+// LoginRequest represents the user login payload
+type LoginRequest struct {
+	Email    string `json:"email" example:"alice@example.com"`
+	Password string `json:"password" example:"mypassword123"`
+}

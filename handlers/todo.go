@@ -24,6 +24,18 @@ func NewTodoHandler(svc service.TodoService) *TodoHandler {
 	return &TodoHandler{svc: svc}
 }
 
+// Create godoc
+// @Summary      Create a new todo
+// @Description  Create a new todo task for the authenticated user
+// @Tags         todos
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request body models.CreateTodoRequest true "Todo Payload"
+// @Success      201 {object} utils.APIResponse
+// @Failure      400 {object} utils.ErrorResponse
+// @Failure      401 {object} utils.ErrorResponse
+// @Router       /todos [post]
 func (h *TodoHandler) Create(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(UserIDKey).(int)
 	if !ok {
@@ -54,6 +66,20 @@ func (h *TodoHandler) Create(w http.ResponseWriter, r *http.Request) {
 	utils.JSON(w, http.StatusCreated, "Todo created successfully", todo)
 }
 
+// Update godoc
+// @Summary      Update a todo
+// @Description  Update title or completion status of an existing todo
+// @Tags         todos
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id      path     int               true "Todo ID"
+// @Param        request body     UpdateTodoRequest  true "Todo Update Payload"
+// @Success      200     {object} utils.APIResponse
+// @Failure      400     {object} utils.ErrorResponse
+// @Failure      401     {object} utils.ErrorResponse
+// @Failure      404     {object} utils.ErrorResponse
+// @Router       /todos/{id} [put]
 func (h *TodoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	// 1. Context theke authenticated user ID neya
 	userID, ok := r.Context().Value(UserIDKey).(int)
@@ -101,6 +127,21 @@ func (h *TodoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	utils.JSON(w, http.StatusOK, "Todo updated successfully", todo)
 }
 
+// GetAll godoc
+// @Summary      Get all todos
+// @Description  Get a paginated, filtered, and sorted list of todos for the authenticated user
+// @Tags         todos
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        page       query     int     false  "Page number" default(1)
+// @Param        limit      query     int     false  "Items per page" default(10)
+// @Param        completed  query     bool    false  "Filter by completed status"
+// @Param        sort       query     string  false  "Sort order (asc/desc)" default(desc)
+// @Success      200        {object}  utils.PaginatedResponse
+// @Failure      401        {object}  utils.ErrorResponse
+// @Failure      500        {object}  utils.ErrorResponse
+// @Router       /todos [get]
 func (h *TodoHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(UserIDKey).(int)
 	if !ok {
@@ -134,6 +175,19 @@ func (h *TodoHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	utils.JSON(w, http.StatusOK, "Todos retrieved successfully", paginatedData)
 }
 
+// Delete godoc
+// @Summary      Delete a todo
+// @Description  Delete a todo belonging to the authenticated user
+// @Tags         todos
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id  path  int  true  "Todo ID"
+// @Success      204 "No Content"
+// @Failure      400 {object} utils.ErrorResponse
+// @Failure      401 {object} utils.ErrorResponse
+// @Failure      404 {object} utils.ErrorResponse
+// @Router       /todos/{id} [delete]
 func (h *TodoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(UserIDKey).(int)
 	if !ok {

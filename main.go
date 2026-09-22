@@ -1,13 +1,25 @@
 package main
 
+// @title           Todo REST API
+// @version         1.0
+// @description     Production-ready Go REST API with JWT Auth and Clean Architecture.
+// @host            localhost:8080
+// @BasePath        /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 import (
 	"crud/config"
+	_ "crud/docs" // swag init চালানোর পর এই ফোল্ডারটি তৈরি হবে
 	"crud/handlers"
 	"crud/repository"
 	"crud/service"
 	"fmt"
 	"log"
 	"net/http"
+
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 func main() {
@@ -48,10 +60,8 @@ func main() {
 	mux.HandleFunc("DELETE /todos/{id}", handlers.Protected(todoHandler.Delete))
 	mux.HandleFunc("PUT /todos/{id}", handlers.Protected(todoHandler.Update))
 
-	mux.HandleFunc("GET /panic-test", func(w http.ResponseWriter, r *http.Request) {
-		// ইচ্ছাকৃতভাবে ক্র্যাশ ঘটানো
-		panic("Testing panic recovery guard!")
-	})
+	// Swagger Documentation Route
+	mux.HandleFunc("GET /swagger/", httpSwagger.WrapHandler)
 
 	crosHandler := handlers.EnableCORS(mux)
 	globalHandler := handlers.RecoverMiddleware(crosHandler)

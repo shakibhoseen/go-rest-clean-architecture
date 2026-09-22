@@ -12,6 +12,11 @@ type APIResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+type ErrorResponse struct {
+	Success bool   `json:"success" example:"false"`
+	Error   string `json:"error" example:"error message description"`
+}
+
 type PaginatedResponse struct {
 	TotalRecords int `json:"total_records"`
 	CurrentPage  int `json:"current_page"`

@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+// CreateTodoRequest represents the input payload for creating a todo
+type CreateTodoRequest struct {
+	Title string `json:"title" example:"Learn Clean Architecture in Go"`
+}
+
 type Todo struct {
 	ID        int       `json:"id"`
 	UserID    int       `json:"user_id"`
