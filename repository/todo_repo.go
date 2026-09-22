@@ -5,11 +5,13 @@ import (
 	"crud/models"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 )
 
 type TodoRepository interface {
 	Create(ctx context.Context, todo *models.Todo) error
-	GetByUserID(ctx context.Context, userID int, limit, offset int) ([]models.Todo, int, error)
+	GetByUserID(ctx context.Context, userID int, completed *bool, sortOrder string, limit, offset int) ([]models.Todo, int, error)
 	GetByIDAndUserID(ctx context.Context, id, userID int) (*models.Todo, error)
 	Update(ctx context.Context, todo *models.Todo) error
 	Delete(ctx context.Context, id, userID int) error
@@ -30,19 +32,41 @@ func (r *todoRepo) Create(ctx context.Context, todo *models.Todo) error {
 		Scan(&todo.ID, &todo.CreatedAt)
 }
 
-func (r *todoRepo) GetByUserID(ctx context.Context, userID int, limit, offset int) ([]models.Todo, int, error) {
+func (r *todoRepo) GetByUserID(ctx context.Context, userID int, completed *bool, sortOrder string, limit, offset int) ([]models.Todo, int, error) {
+
+	countQuery := `SELECT COUNT(*) FROM todos WHERE user_id = $1`
+	query := `SELECT id, user_id, title, completed, created_at FROM todos WHERE user_id = $1`
+
+	args := []any{userID}
+	argIdx := 2
+
+	//check filter present or not
+	if completed != nil {
+		filterClause := fmt.Sprintf(" AND completed = $%d", argIdx)
+		countQuery += filterClause
+		query += filterClause
+		args = append(args, *completed)
+		argIdx++
+	}
+
 	// ১. এই ইউজারের মোট টোডো কয়টি আছে তা গণনা
 	var totalRecords int
-	countQuery := `SELECT COUNT(*) FROM todos WHERE user_id = $1`
-	if err := r.db.QueryRowContext(ctx, countQuery, userID).Scan(&totalRecords); err != nil {
+
+	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalRecords); err != nil {
 		return nil, 0, err
 	}
 
-	query := `SELECT id, user_id, title, completed, created_at 
-	          FROM todos WHERE user_id = $1 ORDER BY created_at DESC
-			  LIMIT $2 OFFSET $3`
+	order := "DESC"
+	if strings.ToLower(sortOrder) == "asc" {
+		order = "ASC"
+	}
 
-	rows, err := r.db.QueryContext(ctx, query, userID, limit, offset)
+	query += fmt.Sprintf(" ORDER BY created_at %s", order)
+
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, err
 	}

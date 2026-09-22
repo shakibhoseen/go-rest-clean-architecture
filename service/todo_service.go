@@ -10,7 +10,7 @@ import (
 
 type TodoService interface {
 	CreateTodo(ctx context.Context, todo *models.Todo) error
-	GetTodos(ctx context.Context, userID, page, limit int) (*utils.PaginatedResponse, error)
+	GetTodos(ctx context.Context, userID int, completed *bool, sortOrder string, page, limit int) (*utils.PaginatedResponse, error)
 	GetTodoByID(ctx context.Context, id, userID int) (*models.Todo, error)
 	UpdateTodo(ctx context.Context, todo *models.Todo) error
 	DeleteTodo(ctx context.Context, id, userID int) error
@@ -28,7 +28,7 @@ func (s *todoService) CreateTodo(ctx context.Context, todo *models.Todo) error {
 	return s.repo.Create(ctx, todo)
 }
 
-func (s *todoService) GetTodos(ctx context.Context, userID, page, limit int) (*utils.PaginatedResponse, error) {
+func (s *todoService) GetTodos(ctx context.Context, userID int, completed *bool, sortOrder string, page, limit int) (*utils.PaginatedResponse, error) {
 	// ডিফল্ট মান হ্যান্ডলিং
 	if page < 1 {
 		page = 1
@@ -41,7 +41,7 @@ func (s *todoService) GetTodos(ctx context.Context, userID, page, limit int) (*u
 	// অফসেট ক্যালকুলেশন
 	offset := (page - 1) * limit
 
-	todos, totalRecords, err := s.repo.GetByUserID(ctx, userID, limit, offset)
+	todos, totalRecords, err := s.repo.GetByUserID(ctx, userID, completed, sortOrder, limit, offset)
 	if err != nil {
 		return nil, err
 	}

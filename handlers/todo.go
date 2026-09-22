@@ -112,10 +112,20 @@ func (h *TodoHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 
+	sortOrder := r.URL.Query().Get("sort")
+
+	var completedPtr *bool
+	completedStr := r.URL.Query().Get("completed")
+	if completedStr != "" {
+		if val, err := strconv.ParseBool(completedStr); err == nil {
+			completedPtr = &val
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
-	paginatedData, err := h.svc.GetTodos(ctx, userID, page, limit)
+	paginatedData, err := h.svc.GetTodos(ctx, userID, completedPtr, sortOrder, page, limit)
 	if err != nil {
 		utils.ErrorJSON(w, http.StatusInternalServerError, "Failed to retrieve todos")
 		return
