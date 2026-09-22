@@ -108,16 +108,20 @@ func (h *TodoHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//url query parameter read default page =1 , limit =10
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
-	todos, err := h.svc.GetTodos(ctx, userID)
+	paginatedData, err := h.svc.GetTodos(ctx, userID, page, limit)
 	if err != nil {
 		utils.ErrorJSON(w, http.StatusInternalServerError, "Failed to retrieve todos")
 		return
 	}
 
-	utils.JSON(w, http.StatusOK, "Todos retrieved successfully", todos)
+	utils.JSON(w, http.StatusOK, "Todos retrieved successfully", paginatedData)
 }
 
 func (h *TodoHandler) Delete(w http.ResponseWriter, r *http.Request) {

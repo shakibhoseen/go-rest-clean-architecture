@@ -12,6 +12,14 @@ type APIResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+type PaginatedResponse struct {
+	TotalRecords int `json:"total_records"`
+	CurrentPage  int `json:"current_page"`
+	TotalPages   int `json:"total_pages"`
+	Limit        int `json:"limit"`
+	Data         any `json:"data"`
+}
+
 func JSON(w http.ResponseWriter, statusCode int, message string, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)

@@ -9,7 +9,7 @@ import (
 
 type TodoRepository interface {
 	Create(ctx context.Context, todo *models.Todo) error
-	GetByUserID(ctx context.Context, userID int) ([]models.Todo, error)
+	GetByUserID(ctx context.Context, userID int, limit, offset int) ([]models.Todo, int, error)
 	GetByIDAndUserID(ctx context.Context, id, userID int) (*models.Todo, error)
 	Update(ctx context.Context, todo *models.Todo) error
 	Delete(ctx context.Context, id, userID int) error
@@ -30,29 +30,38 @@ func (r *todoRepo) Create(ctx context.Context, todo *models.Todo) error {
 		Scan(&todo.ID, &todo.CreatedAt)
 }
 
-func (r *todoRepo) GetByUserID(ctx context.Context, userID int) ([]models.Todo, error) {
+func (r *todoRepo) GetByUserID(ctx context.Context, userID int, limit, offset int) ([]models.Todo, int, error) {
+	// ১. এই ইউজারের মোট টোডো কয়টি আছে তা গণনা
+	var totalRecords int
+	countQuery := `SELECT COUNT(*) FROM todos WHERE user_id = $1`
+	if err := r.db.QueryRowContext(ctx, countQuery, userID).Scan(&totalRecords); err != nil {
+		return nil, 0, err
+	}
+
 	query := `SELECT id, user_id, title, completed, created_at 
-	          FROM todos WHERE user_id = $1 ORDER BY created_at DESC`
-	rows, err := r.db.QueryContext(ctx, query, userID)
+	          FROM todos WHERE user_id = $1 ORDER BY created_at DESC
+			  LIMIT $2 OFFSET $3`
+
+	rows, err := r.db.QueryContext(ctx, query, userID, limit, offset)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
-	var todos []models.Todo
+	todos := []models.Todo{}
 	for rows.Next() {
 		var t models.Todo
 		if err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Completed, &t.CreatedAt); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		todos = append(todos, t)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return todos, nil
+	return todos, totalRecords, nil
 }
 
 func (r *todoRepo) GetByIDAndUserID(ctx context.Context, id, userID int) (*models.Todo, error) {
